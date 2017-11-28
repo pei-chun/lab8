@@ -43,15 +43,15 @@ PointCloudXYZRGB::Ptr model_icp_align (new PointCloudXYZRGB);
 void  cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 {	
 	//Step 1: Convert pointcloud type from Ros pointcloud2  (input) to PCL pointCLoudXYZRGB (model_t1)
-
+	pcl::fromROSMsg (*input, *model_t1);
 	//Step 2: Use function icp_pose_estimation() to register consequently moving object (model_t0, model_t1) 
 	//Step 3: Use function pose_publish() to publish moving object and aligned object pointcloud
 	if (model_t0->points.size() == model_t1->points.size()){
-
-
+		icp_pose_estimation(model_t0, model_t1);
+		pose_publish(model_icp_align, model_t0, model_t1);
  	}
 	//Step 4: Update the current point (model_t0)
-
+	copyPointCloud(*model_t1, *model_t0);
 }   
 
 void  pose_publish (PointCloudXYZRGB::Ptr cloud_icp_align,PointCloudXYZRGB::Ptr cloud_t0, PointCloudXYZRGB::Ptr cloud_t1){
@@ -106,18 +106,18 @@ void icp_pose_estimation (PointCloudXYZRGB::Ptr cloud_t0, PointCloudXYZRGB::Ptr 
 	pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree1 (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree2 (new pcl::search::KdTree<pcl::PointXYZRGB>);
 	///////////Exercise : Use pcl icp function to get transform matrix///////////////////
+	tree1->setInputCloud(cloud_t0);
+	tree2->setInputCloud(cloud_t1);
+	icp.setSearchMethodSource(tree1);                  //
+        icp.setSearchMethodTarget(tree2);                  //
+        icp.setInputSource(cloud_t0);                      // Set align model //              
+        icp.setInputTarget(cloud_t1);                      // Set align target //
+        // Set the max correspondence distance to 5cm (e.g., correspondences with higher distances will be ignored) //
+        icp.setMaxCorrespondenceDistance(1500);
+        icp.setTransformationEpsilon(1e-10);
+        icp.setEuclideanFitnessEpsilon(0.1);
+        icp.setMaximumIterations(300);
 
-
-
-
-
-
-
-
-
-
-
-	
 	////////////////////////////////////////////////////////////////////////////////////
 	icp.align(*model_icp_align);
 	std::cout << icp.getFinalTransformation() << std::endl;
